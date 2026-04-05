@@ -1,0 +1,2676 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>ORMA</title>
+<!-- iOS PWA / Add to Home Screen -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="ORMA">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#ffffff">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #ffffff;
+    --surface: #ffffff;
+    --surface2: #ffffff;
+    --border: #000000;
+    --border-strong: #000000;
+    --text: #000000;
+    --text-2: #000000;
+    --text-3: #666666;
+    --accent: #000000;
+    --green: #000000;
+    --green-light: #f0f0f0;
+    --red: #000000;
+    --amber: #000000;
+    --mono: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    --sans: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    --r: 8px;
+    --r2: 10px;
+  }
+
+  html { font-size: 15px; }
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── LAYOUT ────────────────────────────────────────── */
+  .app {
+    max-width: 430px;
+    margin: 0 auto;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg);
+    position: relative;
+  }
+
+  .screen { display: none; flex-direction: column; flex: 1; padding-bottom: 80px; }
+  .screen.active { display: flex; }
+
+  /* ── NAV ────────────────────────────────────────────── */
+  .nav {
+    position: fixed;
+    bottom: 0; left: 50%;
+    transform: translateX(-50%);
+    width: 100%; max-width: 430px;
+    background: #000000;
+    border-top: none;
+    display: flex;
+    z-index: 100;
+    padding: 0 4px 8px;
+    padding-bottom: max(8px, env(safe-area-inset-bottom));
+  }
+
+  .nav-btn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    padding: 10px 4px 4px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #666666;
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.05em;
+    text-transform: lowercase;
+    transition: color 0.15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .nav-btn.active { color: #ffffff; }
+  .nav-btn svg { width: 20px; height: 20px; stroke-width: 1.5; }
+
+  /* ── HEADER ─────────────────────────────────────────── */
+  .page-header {
+    padding: 52px 20px 16px;
+    border-bottom: none;
+    background: #000000;
+    position: sticky; top: 0; z-index: 50;
+  }
+  .page-header-inner {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+  }
+  .page-title {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #666666;
+  }
+  .page-date {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: #666666;
+  }
+  .page-headline {
+    font-size: 26px;
+    font-weight: 500;
+    letter-spacing: -0.03em;
+    margin-top: 4px;
+    line-height: 1.1;
+    color: #ffffff;
+  }
+
+  /* ── SCROLL AREA ────────────────────────────────────── */
+  .scroll-area {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 20px 20px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* ── CARD ───────────────────────────────────────────── */
+  .card {
+    background: transparent;
+    border: none;
+    border-top: 1px solid #000000;
+    border-radius: 0;
+    overflow: visible;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .card:first-child { border-top: none; }
+
+  .card-header {
+    padding: 18px 0 10px;
+    border-bottom: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .card-title {
+    font-family: var(--sans);
+    font-size: 13px;
+    letter-spacing: -0.01em;
+    text-transform: none;
+    color: var(--text);
+    font-weight: 600;
+  }
+  .card-badge {
+    font-family: var(--mono);
+    font-size: 10px;
+    background: #000000;
+    color: #ffffff;
+    padding: 2px 8px;
+    border-radius: 20px;
+  }
+  .card-body { padding: 0 0 20px; }
+
+  /* ── SCORE RING ─────────────────────────────────────── */
+  .score-card {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 16px;
+  }
+  .ring-wrap { position: relative; flex-shrink: 0; }
+  .ring-wrap svg { display: block; transform: rotate(-90deg); }
+  .ring-center {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  .ring-pct {
+    font-family: var(--mono);
+    font-size: 22px;
+    font-weight: 500;
+    line-height: 1;
+    letter-spacing: -0.02em;
+  }
+  .ring-label {
+    font-family: var(--mono);
+    font-size: 8px;
+    color: var(--text-3);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-top: 2px;
+  }
+  .score-meta { flex: 1; }
+  .score-meta-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .score-meta-row:last-child { border-bottom: none; }
+  .smr-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-2);
+  }
+  .smr-val {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 500;
+  }
+
+  /* ── CHECKLIST ──────────────────────────────────────── */
+  .check-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+  .check-item:last-child { border-bottom: none; }
+  .check-box {
+    width: 18px; height: 18px;
+    border: 1.5px solid var(--border-strong);
+    border-radius: 2px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.1s;
+  }
+  .check-item.checked .check-box {
+    background: var(--text);
+    border-color: var(--text);
+  }
+  .check-item.checked .check-box::after {
+    content: '';
+    width: 9px; height: 5px;
+    border-left: 1.5px solid white;
+    border-bottom: 1.5px solid white;
+    transform: rotate(-45deg) translateY(-1px);
+    display: block;
+  }
+  .check-label {
+    font-size: 13px;
+    color: var(--text);
+    transition: color 0.1s;
+    flex: 1;
+  }
+  .check-item.checked .check-label {
+    color: var(--text-3);
+    text-decoration: line-through;
+    text-decoration-color: var(--text-3);
+  }
+
+  /* YES / NO states (swipe or tap) */
+  .check-item { touch-action: pan-y; transition: background 0.15s; }
+  .check-item.yes { background: rgba(16, 185, 129, 0.08); }
+  .check-item.yes .check-box {
+    background: #10b981;
+    border-color: #10b981;
+  }
+  .check-item.yes .check-box::after {
+    content: '';
+    width: 9px; height: 5px;
+    border-left: 1.5px solid white;
+    border-bottom: 1.5px solid white;
+    transform: rotate(-45deg) translateY(-1px);
+    display: block;
+  }
+  .check-item.no { background: rgba(239, 68, 68, 0.08); }
+  .check-item.no .check-box {
+    background: #ef4444;
+    border-color: #ef4444;
+    position: relative;
+  }
+  .check-item.no .check-box::after {
+    content: '';
+    width: 10px; height: 1.5px;
+    background: white;
+    transform: rotate(45deg);
+    position: absolute;
+    display: block;
+  }
+  .check-item.no .check-box::before {
+    content: '';
+    width: 10px; height: 1.5px;
+    background: white;
+    transform: rotate(-45deg);
+    position: absolute;
+    display: block;
+  }
+  .check-item.no .check-label {
+    color: var(--text-3);
+    text-decoration: line-through;
+    text-decoration-color: var(--text-3);
+  }
+
+  /* ── METRICS GRID ───────────────────────────────────── */
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 1px;
+    background: #000000;
+    border: 1px solid #000000;
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .metric-cell {
+    background: #ffffff;
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .metric-cell-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-3);
+  }
+  .metric-cell-input {
+    font-family: var(--mono);
+    font-size: 16px;
+    font-weight: 500;
+    background: none;
+    border: none;
+    outline: none;
+    color: var(--text);
+    width: 100%;
+    padding: 0;
+  }
+  .metric-cell-unit {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--text-3);
+  }
+  .ampm-toggle {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.06em;
+    background: #000000;
+    color: #ffffff;
+    border: none;
+    border-radius: 4px;
+    padding: 2px 6px;
+    cursor: pointer;
+    align-self: flex-start;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* ── WATER TRACK ────────────────────────────────────── */
+  .water-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .water-row:last-child { border-bottom: none; }
+  .water-icon {
+    width: 28px; height: 28px;
+    border: 1.5px solid var(--border-strong);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 12px;
+    transition: all 0.1s;
+  }
+  .water-row.filled .water-icon {
+    background: var(--text);
+    border-color: var(--text);
+    color: white;
+  }
+  .water-info { flex: 1; }
+  .water-name { font-size: 13px; }
+  .water-oz {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-3);
+  }
+
+  /* ── WHOOP METERS ───────────────────────────────────── */
+  .whoop-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+  }
+  .whoop-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 12px 8px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--r2);
+  }
+  .whoop-ring { position: relative; }
+  .whoop-ring svg { display: block; transform: rotate(-90deg); }
+  .whoop-ring-val {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 500;
+  }
+  .whoop-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-2);
+  }
+
+  /* ── STAT ROW ───────────────────────────────────────── */
+  .stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .stat-row:last-child { border-bottom: none; }
+  .stat-label { font-size: 13px; color: var(--text-2); }
+  .stat-value { font-family: var(--mono); font-size: 13px; font-weight: 500; }
+
+  /* ── WEEKLY STATS ───────────────────────────────────── */
+  .week-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    padding: 4px 0;
+  }
+  .week-stat {
+    padding: 12px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--r2);
+  }
+  .ws-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-3);
+    margin-bottom: 4px;
+  }
+  .ws-val {
+    font-family: var(--mono);
+    font-size: 22px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    line-height: 1;
+  }
+  .ws-sub {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--text-3);
+    margin-top: 2px;
+  }
+
+  /* ── BAR CHART ──────────────────────────────────────── */
+  .bar-chart {
+    display: flex;
+    align-items: flex-end;
+    gap: 4px;
+    height: 60px;
+    padding: 4px 0 0;
+  }
+  .bar-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    height: 100%;
+    justify-content: flex-end;
+  }
+  .bar {
+    width: 100%;
+    background: var(--text);
+    border-radius: 1px;
+    min-height: 2px;
+    transition: height 0.3s;
+  }
+  .bar.light { background: var(--border-strong); }
+  .bar-x {
+    font-family: var(--mono);
+    font-size: 8px;
+    color: var(--text-3);
+    text-transform: uppercase;
+  }
+
+  /* ── STREAK ROW ─────────────────────────────────────── */
+  .streak-list { display: flex; flex-direction: column; gap: 0; }
+  .streak-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .streak-item:last-child { border-bottom: none; }
+  .streak-bar-wrap {
+    flex: 1;
+    height: 4px;
+    background: var(--surface2);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .streak-bar {
+    height: 100%;
+    background: var(--text);
+    border-radius: 2px;
+  }
+  .streak-name { font-size: 12px; width: 90px; }
+  .streak-val {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-2);
+    width: 30px;
+    text-align: right;
+  }
+
+  /* ── LINE CHART ─────────────────────────────────────── */
+  .line-chart-wrap {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .line-chart-wrap svg { display: block; }
+
+  /* ── CALENDAR ───────────────────────────────────────── */
+  .cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+  }
+  .cal-day-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    text-transform: uppercase;
+    color: var(--text-3);
+    text-align: center;
+    padding: 4px 0;
+  }
+  .cal-day {
+    aspect-ratio: 1;
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--mono);
+    font-size: 10px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    border: 1.5px solid transparent;
+    transition: all 0.1s;
+  }
+  .cal-day.empty { cursor: default; }
+  .cal-day.has-data { border-color: var(--border); }
+  .cal-day.pct-high { background: var(--text); color: white; border-color: var(--text); }
+  .cal-day.pct-med { background: var(--border-strong); color: white; border-color: var(--border-strong); }
+  .cal-day.pct-low { background: var(--surface2); color: var(--text-2); border-color: var(--border); }
+  .cal-day.today { border-color: var(--text) !important; font-weight: 600; }
+
+  /* ── HISTORY LIST ───────────────────────────────────── */
+  .history-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .history-item:last-child { border-bottom: none; }
+  .hi-date {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-2);
+    width: 60px;
+  }
+  .hi-bar-wrap {
+    flex: 1;
+    height: 3px;
+    background: var(--surface2);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .hi-bar { height: 100%; background: var(--text); border-radius: 2px; }
+  .hi-pct {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 500;
+    width: 36px;
+    text-align: right;
+  }
+
+  /* ── TREND CHARTS ───────────────────────────────────── */
+  .trend-tabs {
+    display: flex;
+    gap: 0;
+    width: 100%;
+    box-sizing: border-box;
+    border: 1.5px solid var(--border);
+    border-radius: var(--r2);
+    overflow: hidden;
+    margin-bottom: 8px;
+  }
+  .trend-tab {
+    flex: 1;
+    min-width: 0;
+    padding: 7px 4px;
+    background: none;
+    border: none;
+    border-right: 1px solid var(--border);
+    cursor: pointer;
+    font-family: var(--mono);
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-3);
+    transition: all 0.15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .trend-tab:last-child { border-right: none; }
+  .trend-tab.active { background: #000000; color: #ffffff; }
+
+  /* ── STATS PANELS ───────────────────────────────────── */
+  #stats-panel-weekly,
+  #stats-panel-monthly,
+  #stats-panel-trends {
+    width: 100%;
+    box-sizing: border-box;
+    overflow-x: hidden;
+  }
+
+  /* ── SECTION LABEL ──────────────────────────────────── */
+  .section-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-3);
+    padding: 8px 0 4px;
+  }
+
+  /* ── PILL ───────────────────────────────────────────── */
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: 20px;
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 500;
+  }
+  .pill.green { background: var(--green-light); color: var(--green); }
+  .pill.amber { background: #fef3c7; color: var(--amber); }
+
+  /* ── MONTHLY PROGRESS ───────────────────────────────── */
+  .month-compliance {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px;
+  }
+  .mc-ring { position: relative; flex-shrink: 0; }
+  .mc-ring svg { display: block; transform: rotate(-90deg); }
+  .mc-ring-inner {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+  }
+  .mc-pct { font-family: var(--mono); font-size: 28px; font-weight: 500; letter-spacing: -0.03em; line-height: 1; }
+  .mc-label { font-family: var(--mono); font-size: 8px; color: var(--text-3); letter-spacing: 0.06em; text-transform: uppercase; }
+  .mc-stats { flex: 1; }
+
+  /* ── DIVIDER ────────────────────────────────────────── */
+  .divider { height: 1px; background: var(--border); margin: 4px 0; }
+
+  /* ── MISC ───────────────────────────────────────────── */
+  .text-mono { font-family: var(--mono); }
+  .text-sm { font-size: 12px; }
+  .text-xs { font-size: 11px; }
+  .text-muted { color: var(--text-3); }
+  .fw5 { font-weight: 500; }
+  .flex-between { display: flex; justify-content: space-between; align-items: center; }
+  .pb-4 { padding-bottom: 4px; }
+
+  /* ── SCROLLBAR ──────────────────────────────────────── */
+  ::-webkit-scrollbar { width: 0; }
+
+  /* ── RESPONSIVE ─────────────────────────────────────── */
+  @media (min-width: 430px) {
+    .app {
+      box-shadow: 0 0 0 1px var(--border), 0 40px 80px rgba(0,0,0,0.08);
+      min-height: 100vh;
+    }
+    body { background: #e8e6e1; display: flex; align-items: stretch; justify-content: center; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- TODAY SCREEN -->
+  <div class="screen active" id="screen-today">
+    <div class="page-header">
+      <div class="page-header-inner">
+        <div>
+          <div class="page-title" id="today-page-title">Today</div>
+          <div style="display:flex;align-items:center;gap:4px;margin-top:4px">
+            <button id="prev-day-btn" onclick="navigateDay(-1)" style="background:none;border:none;cursor:pointer;padding:2px 4px;color:#ffffff;display:flex;align-items:center;-webkit-tap-highlight-color:transparent">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+            </button>
+            <div class="page-headline" id="today-headline" style="margin-top:0;cursor:pointer" onclick="openDatePicker()">Sunday, Mar 15</div>
+            <button id="next-day-btn" onclick="navigateDay(1)" style="background:none;border:none;cursor:pointer;padding:2px 4px;color:#ffffff;display:flex;align-items:center;opacity:0.2;pointer-events:none;-webkit-tap-highlight-color:transparent">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
+          </div>
+        </div>
+        <div style="text-align:right">
+          <div class="page-date text-mono" style="font-size:11px;color:var(--text-3)" id="day-num-el">Day 1</div>
+          <div class="page-date text-mono" style="font-size:11px;margin-top:2px" id="today-time">—</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="scroll-area">
+
+      <!-- Completion Score -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Daily score</span>
+          <span class="card-badge" id="score-badge">0 / 0</span>
+        </div>
+        <div class="score-card">
+          <div class="ring-wrap">
+            <svg width="80" height="80" viewBox="0 0 80 80">
+              <circle cx="40" cy="40" r="32" fill="none" stroke="#e8e6e1" stroke-width="5"/>
+              <circle cx="40" cy="40" r="32" fill="none" stroke="#0f0e0c" stroke-width="5"
+                stroke-dasharray="201.06" stroke-dashoffset="201.06"
+                id="score-ring" stroke-linecap="square"/>
+            </svg>
+            <div class="ring-center">
+              <span class="ring-pct" id="score-pct">0%</span>
+            </div>
+          </div>
+          <div class="score-meta" style="flex:1">
+            <div class="score-meta-row">
+              <span class="smr-label">Habits</span>
+              <span class="smr-val" id="meta-habits">0/7</span>
+            </div>
+            <div class="score-meta-row">
+              <span class="smr-label">Vitamins</span>
+              <span class="smr-val" id="meta-vitamins">0/4</span>
+            </div>
+            <div class="score-meta-row">
+              <span class="smr-label">Water</span>
+              <span class="smr-val" id="meta-water">0/4</span>
+            </div>
+            <div class="score-meta-row">
+              <span class="smr-label">75 hard</span>
+              <span class="smr-val" id="meta-75">0/7</span>
+            </div>
+            <div class="score-meta-row">
+              <span class="smr-label">Routines</span>
+              <span class="smr-val" id="meta-routines">0/26</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Daily Metrics -->
+      <div class="card">
+        <div class="card-header"><span class="card-title">Daily metrics</span></div>
+        <div class="card-body">
+        <div class="metrics-grid">
+          <div class="metric-cell">
+            <div class="metric-cell-label">Bed</div>
+            <input class="metric-cell-input" type="text" placeholder="11:30" maxlength="5" id="m-bed">
+            <button class="ampm-toggle" id="m-bed-ampm-btn" onclick="toggleAmPm('m-bed-ampm','m-bed-ampm-btn')">PM</button>
+          </div>
+          <div class="metric-cell">
+            <div class="metric-cell-label">Wake</div>
+            <input class="metric-cell-input" type="text" placeholder="6:30" maxlength="5" id="m-wake">
+            <button class="ampm-toggle" id="m-wake-ampm-btn" onclick="toggleAmPm('m-wake-ampm','m-wake-ampm-btn')">AM</button>
+          </div>
+          <div class="metric-cell">
+            <div class="metric-cell-label">Hours</div>
+            <input class="metric-cell-input" type="text" placeholder="7.0" maxlength="4" id="m-hours">
+            <div class="metric-cell-unit">hrs</div>
+          </div>
+          <div class="metric-cell">
+            <div class="metric-cell-label">Weight</div>
+            <input class="metric-cell-input" type="text" placeholder="185" maxlength="5" id="m-weight">
+            <div class="metric-cell-unit">lbs</div>
+          </div>
+          <div class="metric-cell">
+            <div class="metric-cell-label">RHR</div>
+            <input class="metric-cell-input" type="text" placeholder="52" maxlength="3" id="m-rhr">
+            <div class="metric-cell-unit">bpm</div>
+          </div>
+          <div class="metric-cell">
+            <div class="metric-cell-label">Body fat</div>
+            <input class="metric-cell-input" type="text" placeholder="14.2" maxlength="4" id="m-bf">
+            <div class="metric-cell-unit">%</div>
+          </div>
+        </div>
+        </div>
+      </div>
+
+      <!-- Habits -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Habits</span>
+          <span class="card-badge" id="badge-habits">0/7</span>
+        </div>
+        <div class="card-body" id="list-habits"></div>
+      </div>
+
+      <!-- Vitamins -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Vitamins</span>
+          <span class="card-badge" id="badge-vitamins">0/4</span>
+        </div>
+        <div class="card-body" id="list-vitamins"></div>
+      </div>
+
+      <!-- Water -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Water intake</span>
+          <div style="display:flex;align-items:center;gap:10px">
+            <button id="water-edit-btn" onclick="toggleWaterEdit()" style="font-family:var(--mono);font-size:9px;letter-spacing:0.08em;text-transform:uppercase;background:none;border:none;color:var(--text-3);cursor:pointer;padding:0">Edit</button>
+            <span class="card-badge" id="badge-water">0/4</span>
+          </div>
+        </div>
+        <div class="card-body" id="list-water"></div>
+      </div>
+
+      <!-- Whoop -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Whoop</span>
+          <span class="card-badge" id="whoop-badge">Not connected</span>
+        </div>
+        <div class="card-body">
+          <!-- Shown when not connected -->
+          <div id="whoop-connect-btn">
+            <button onclick="whoopConnect()" style="width:100%;font-family:var(--mono);font-size:10px;letter-spacing:0.1em;text-transform:uppercase;background:var(--text);color:white;border:none;padding:11px;cursor:pointer;border-radius:var(--r2);">Connect Whoop →</button>
+          </div>
+          <!-- Shown when connected -->
+          <div class="whoop-grid" id="whoop-grid" style="display:none"></div>
+
+          <div id="whoop-sync-row" style="display:none;justify-content:space-between;align-items:center;margin-top:10px;padding-top:8px;border-top:1px solid var(--border)">
+            <button onclick="whoopFetchData()" style="font-family:var(--mono);font-size:9px;letter-spacing:0.08em;text-transform:uppercase;background:none;border:1.5px solid var(--border);padding:5px 10px;cursor:pointer;color:var(--text-2);border-radius:var(--r2);">Sync now</button>
+            <button onclick="whoopDisconnect()" style="font-family:var(--mono);font-size:9px;letter-spacing:0.08em;text-transform:uppercase;background:none;border:none;color:var(--text-3);cursor:pointer;padding:0">Disconnect</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 75 Hard -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">75 hard</span>
+          <span class="card-badge" id="badge-75">0/7</span>
+        </div>
+        <div class="card-body" id="list-75"></div>
+      </div>
+
+      <!-- Morning Routine -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Morning routine</span>
+          <span class="card-badge" id="badge-morning">0/13</span>
+        </div>
+        <div class="card-body" id="list-morning"></div>
+      </div>
+
+      <!-- Evening Routine -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Evening routine</span>
+          <span class="card-badge" id="badge-evening">0/13</span>
+        </div>
+        <div class="card-body" id="list-evening"></div>
+      </div>
+
+      <!-- Journal -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Journal</span>
+          <span class="card-badge" id="badge-journal">—</span>
+        </div>
+        <div class="card-body">
+          <textarea id="journal-entry" placeholder="How did today go? Wins, struggles, notes to self…" style="width:100%;min-height:120px;font-family:var(--mono);font-size:11px;line-height:1.7;border:none;background:transparent;resize:vertical;outline:none;color:var(--text);box-sizing:border-box;padding:0"></textarea>
+        </div>
+      </div>
+
+    </div>
+  </div><!-- /today -->
+
+  <!-- STATS SCREEN (Weekly + Monthly + Trends combined) -->
+  <div class="screen" id="screen-stats">
+    <div class="page-header">
+      <div class="page-header-inner">
+        <div>
+          <div class="page-title" id="stats-title">Weekly</div>
+          <div class="page-headline" id="stats-headline" style="min-height:22px">—</div>
+        </div>
+        <div style="text-align:right">
+          <div class="page-date text-mono" style="font-size:11px;color:var(--text-3)" id="stats-sub">—</div>
+        </div>
+      </div>
+    </div>
+    <div class="scroll-area">
+      <!-- Stats sub-tabs -->
+      <div class="trend-tabs" style="margin-bottom:20px">
+        <button class="trend-tab active" data-panel="weekly">Weekly</button>
+        <button class="trend-tab" data-panel="monthly">Monthly</button>
+        <button class="trend-tab" data-panel="trends">Trends</button>
+      </div>
+
+      <!-- ── WEEKLY PANEL ── -->
+      <div id="stats-panel-weekly">
+
+      <!-- Weekly stats -->
+      <div class="card">
+        <div class="card-header"><span class="card-title">Weekly averages</span></div>
+        <div class="card-body">
+          <div class="week-grid" id="weekly-stats-grid"></div>
+        </div>
+      </div>
+
+      <!-- Completion by day -->
+      <div class="card">
+        <div class="card-header"><span class="card-title">Daily completion</span><span class="card-badge">This week</span></div>
+        <div class="card-body">
+          <div class="bar-chart" id="weekly-bar-chart"></div>
+        </div>
+      </div>
+
+      <!-- Habit streaks -->
+      <div class="card">
+        <div class="card-header"><span class="card-title">Habit streaks</span></div>
+        <div class="card-body">
+          <div class="streak-list" id="streak-list"></div>
+        </div>
+      </div>
+
+      <!-- Strongest / Weakest -->
+      <div class="card">
+        <div class="card-header"><span class="card-title">Strongest habits</span></div>
+        <div class="card-body" id="strongest-habits"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><span class="card-title">Weakest habits</span></div>
+        <div class="card-body" id="weakest-habits"></div>
+      </div>
+
+      <!-- Whoop weekly -->
+      <div class="card">
+        <div class="card-header"><span class="card-title">Whoop weekly</span></div>
+        <div class="card-body" id="whoop-weekly-body"></div>
+      </div>
+
+      <!-- Pacing -->
+      <div class="card">
+        <div class="card-header"><span class="card-title">Pacing indicators</span></div>
+        <div class="card-body" id="pacing-body"></div>
+      </div>
+
+      </div><!-- /stats-panel-weekly -->
+
+      <!-- ── MONTHLY PANEL ── -->
+      <div id="stats-panel-monthly" style="display:none">
+
+      <!-- Compliance ring -->
+      <div class="card">
+        <div class="card-header"><span class="card-title">Monthly compliance</span></div>
+        <div class="month-compliance">
+          <div class="mc-ring">
+            <svg width="90" height="90" viewBox="0 0 90 90">
+              <circle cx="45" cy="45" r="36" fill="none" stroke="#e8e6e1" stroke-width="6"/>
+              <circle cx="45" cy="45" r="36" fill="none" stroke="#0f0e0c" stroke-width="6"
+                stroke-dasharray="226.19" stroke-dashoffset="62.2" stroke-linecap="square"/>
+            </svg>
+            <div class="mc-ring-inner">
+              <span class="mc-pct">72%</span>
+              <span class="mc-label">avg</span>
+            </div>
+          </div>
+          <div class="mc-stats" style="flex:1">
+            <div class="stat-row"><span class="stat-label">Days logged</span><span class="stat-value text-mono">15</span></div>
+            <div class="stat-row"><span class="stat-label">Perfect days</span><span class="stat-value text-mono">3</span></div>
+            <div class="stat-row"><span class="stat-label">Streak</span><span class="stat-value text-mono">6 days</span></div>
+            <div class="stat-row"><span class="stat-label">Longest streak</span><span class="stat-value text-mono">9 days</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Calendar view -->
+      <div class="card">
+        <div class="card-header"><span class="card-title">Calendar view</span><span class="card-badge">March</span></div>
+        <div class="card-body">
+          <div class="cal-grid" id="cal-grid"></div>
+        </div>
+      </div>
+
+      <!-- Monthly averages -->
+      <div class="card">
+        <div class="card-header"><span class="card-title">Monthly averages</span></div>
+        <div class="card-body">
+          <div class="week-grid" id="monthly-avg-grid"></div>
+        </div>
+      </div>
+
+      <!-- Habit consistency -->
+      <div class="card">
+        <div class="card-header"><span class="card-title">Habit consistency</span></div>
+        <div class="card-body">
+          <div class="streak-list" id="monthly-habit-list"></div>
+        </div>
+      </div>
+
+      <!-- Pacing toward goals -->
+      <div class="card">
+        <div class="card-header"><span class="card-title">Pacing toward goals</span></div>
+        <div class="card-body">
+          <div class="stat-row"><span class="stat-label">Target weight</span><span class="stat-value text-mono">180 lbs</span></div>
+          <div class="stat-row"><span class="stat-label">Current</span><span class="stat-value text-mono">186 lbs</span></div>
+          <div class="stat-row"><span class="stat-label">Remaining</span><span class="stat-value text-mono">6 lbs</span></div>
+          <div class="stat-row"><span class="stat-label">Weekly trend</span><span class="stat-value text-mono">↓ 0.8 lbs/wk</span></div>
+          <div class="stat-row"><span class="stat-label">Est. completion</span><span class="stat-value text-mono"><span class="pill green">Apr 26</span></span></div>
+        </div>
+      </div>
+
+      </div><!-- /stats-panel-monthly -->
+
+      <!-- ── TRENDS PANEL ── -->
+      <div id="stats-panel-trends" style="display:none">
+
+      <div class="trend-tabs" id="trend-tabs">
+        <button class="trend-tab active" data-chart="sleep">Sleep</button>
+        <button class="trend-tab" data-chart="weight">Weight</button>
+        <button class="trend-tab" data-chart="rhr">RHR</button>
+        <button class="trend-tab" data-chart="water">Water</button>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title" id="trend-chart-title">Sleep hours</span>
+          <span class="card-badge" id="trend-chart-avg">avg 7.2h</span>
+        </div>
+        <div class="card-body" style="padding-bottom:8px">
+          <div class="line-chart-wrap">
+            <svg id="trend-svg" width="100%" height="120" viewBox="0 0 380 120" preserveAspectRatio="xMinYMid meet"></svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- Body fat -->
+      <div class="card">
+        <div class="card-header"><span class="card-title">Body fat</span><span class="card-badge">avg 14.4%</span></div>
+        <div class="card-body" style="padding-bottom:8px">
+          <div class="line-chart-wrap">
+            <svg id="bf-svg" width="100%" height="90" viewBox="0 0 380 90" preserveAspectRatio="xMinYMid meet"></svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- Whoop recovery -->
+      <div class="card">
+        <div class="card-header"><span class="card-title">Whoop recovery</span><span class="card-badge">avg 71%</span></div>
+        <div class="card-body" style="padding-bottom:8px">
+          <div class="line-chart-wrap">
+            <svg id="recovery-svg" width="100%" height="90" viewBox="0 0 380 90" preserveAspectRatio="xMinYMid meet"></svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- Completion -->
+      <div class="card">
+        <div class="card-header"><span class="card-title">Daily completion score</span><span class="card-badge">avg 72%</span></div>
+        <div class="card-body" style="padding-bottom:8px">
+          <div class="line-chart-wrap">
+            <svg id="completion-svg" width="100%" height="90" viewBox="0 0 380 90" preserveAspectRatio="xMinYMid meet"></svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- Strain -->
+      <div class="card">
+        <div class="card-header"><span class="card-title">Whoop strain</span><span class="card-badge">avg 14.1</span></div>
+        <div class="card-body" style="padding-bottom:8px">
+          <div class="line-chart-wrap">
+            <svg id="strain-svg" width="100%" height="90" viewBox="0 0 380 90" preserveAspectRatio="xMinYMid meet"></svg>
+          </div>
+        </div>
+      </div>
+
+      </div><!-- /stats-panel-trends -->
+
+    </div><!-- /scroll-area -->
+  </div><!-- /stats -->
+
+  <!-- HISTORY SCREEN -->
+  <div class="screen" id="screen-history">
+    <div class="page-header">
+      <div class="page-header-inner">
+        <div>
+          <div class="page-title">History</div>
+          <div class="page-headline">All logs</div>
+        </div>
+      </div>
+    </div>
+    <div class="scroll-area">
+
+      <div class="card">
+        <div class="card-header"><span class="card-title">Recent days</span><span class="card-badge">74 entries</span></div>
+        <div class="card-body" id="history-list"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><span class="card-title">Activity log</span><span class="card-badge" id="activity-badge">0</span></div>
+        <div class="card-body" id="activity-list"></div>
+      </div>
+
+    </div>
+  </div><!-- /history -->
+
+  <!-- NAV -->
+  <nav class="nav">
+    <button class="nav-btn active" data-screen="today">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      Today
+    </button>
+    <button class="nav-btn" data-screen="stats">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      Stats
+    </button>
+    <button class="nav-btn" data-screen="history">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.51"/></svg>
+      History
+    </button>
+  </nav>
+
+  <!-- DATE PICKER MODAL -->
+  <div id="date-picker-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;padding:20px" onclick="if(event.target===this)closeDatePicker()">
+    <div style="background:var(--bg);border-radius:var(--r2);padding:16px;width:100%;max-width:340px;box-shadow:0 10px 40px rgba(0,0,0,0.3)">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <button id="dp-prev" style="background:none;border:none;cursor:pointer;padding:4px 8px;color:var(--text);font-size:18px;-webkit-tap-highlight-color:transparent">‹</button>
+        <div id="dp-title" style="font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:0.5px;text-transform:uppercase"></div>
+        <button id="dp-next" style="background:none;border:none;cursor:pointer;padding:4px 8px;color:var(--text);font-size:18px;-webkit-tap-highlight-color:transparent">›</button>
+      </div>
+      <div id="dp-grid" class="cal-grid"></div>
+      <button onclick="closeDatePicker()" style="width:100%;margin-top:12px;padding:8px;background:none;border:1.5px solid var(--border);border-radius:var(--r2);font-family:var(--mono);font-size:11px;color:var(--text-2);cursor:pointer;text-transform:uppercase;letter-spacing:0.5px">Cancel</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── CONSTANTS ────────────────────────────────────────────
+const HABITS   = ['Creatine','Read','Sleep by 12','Temperance','Meditation','Write / Journal','Relationship'];
+const VITAMINS = ['Fish oil','Vitamin D','Vitamin C','Magnesium'];
+const HARD75   = ['Outdoor workout 45 min','Workout 45 min','Progress picture','Reading 10 pages','Drink 128 oz water','Diet','No cheat meals'];
+const MORNING  = ['Brush teeth','Floss','Mouthwash','Shower','Pray','Weigh','Dress','Pack workbag','Pack gym'];
+const EVENING  = ['Brush teeth','Floss','Mouthwash','Clean workspace','Clean dishes','Pack workbag','Pack gym','Pack vitamins','Pray'];
+
+function loadWaterConfig() {
+  const s = localStorage.getItem('lifeos_water_config');
+  return s ? JSON.parse(s) : [{name:'Morning',oz:16},{name:'Afternoon',oz:36},{name:'Gym',oz:36},{name:'Evening',oz:36}];
+}
+function saveWaterConfig() {
+  localStorage.setItem('lifeos_water_config', JSON.stringify(WATER));
+}
+let WATER = loadWaterConfig();
+const METRIC_IDS = ['m-bed','m-wake','m-hours','m-weight','m-rhr','m-bf'];
+const WHOOP_DEFAULTS = [{label:'Sleep',val:82,max:100},{label:'Recovery',val:74,max:100},{label:'Strain',val:14,max:21}];
+
+// ── STORAGE HELPERS ──────────────────────────────────────
+const STORE_PREFIX = 'lifeos_';
+
+function todayKey() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function loadDay(dateKey) {
+  try {
+    const raw = localStorage.getItem(STORE_PREFIX + 'day_' + dateKey);
+    return raw ? JSON.parse(raw) : null;
+  } catch(e) { return null; }
+}
+
+function saveDay(dateKey, data) {
+  try {
+    localStorage.setItem(STORE_PREFIX + 'day_' + dateKey, JSON.stringify(data));
+  } catch(e) { console.warn('Storage full:', e); }
+}
+
+function getAllDayKeys() {
+  const keys = [];
+  for(let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if(k && k.startsWith(STORE_PREFIX + 'day_')) {
+      keys.push(k.replace(STORE_PREFIX + 'day_', ''));
+    }
+  }
+  return keys.sort().reverse();
+}
+
+function loadWhoopData(dateKey) {
+  try {
+    const raw = localStorage.getItem(STORE_PREFIX + 'whoop_' + (dateKey || todayKey()));
+    return raw ? JSON.parse(raw) : WHOOP_DEFAULTS.map(w => ({...w}));
+  } catch(e) { return WHOOP_DEFAULTS.map(w => ({...w})); }
+}
+
+function saveWhoopData(data) {
+  try {
+    localStorage.setItem(STORE_PREFIX + 'whoop_' + currentViewDate, JSON.stringify(data));
+  } catch(e) {}
+}
+
+// ── STATE ─────────────────────────────────────────────────
+let currentViewDate = todayKey();
+let state = {};
+let whoopState = loadWhoopData();
+
+function buildEmptyState() {
+  const s = {};
+  HABITS.forEach(h   => s['habit_'+h]   = false);
+  VITAMINS.forEach(v => s['vitamin_'+v] = false);
+  WATER.forEach(w    => s['water_'+w.name] = false);
+  HARD75.forEach(h   => s['h75_'+h]     = false);
+  MORNING.forEach(m  => s['morning_'+m] = false);
+  EVENING.forEach(e  => s['evening_'+e] = false);
+  METRIC_IDS.forEach(id => s[id] = '');
+  s['m-bed-ampm']  = 'pm';
+  s['m-wake-ampm'] = 'am';
+  s.journal = '';
+  return s;
+}
+
+let _priorStateSnapshot = {};
+
+function loadTodayState() {
+  const saved = loadDay(currentViewDate);
+  state = saved ? Object.assign(buildEmptyState(), saved) : buildEmptyState();
+  _priorStateSnapshot = JSON.parse(JSON.stringify(state));
+}
+
+function saveTodayState() {
+  const events = diffStates(_priorStateSnapshot, state);
+  saveDay(currentViewDate, state);
+  if(events.length) logActivity(events);
+  _priorStateSnapshot = JSON.parse(JSON.stringify(state));
+}
+
+// ── ACTIVITY LOG ──────────────────────────────────────────
+function loadActivityLog() {
+  try { return JSON.parse(localStorage.getItem(STORE_PREFIX+'activity')||'[]'); } catch(e) { return []; }
+}
+function saveActivityLog(log) {
+  try { localStorage.setItem(STORE_PREFIX+'activity', JSON.stringify(log.slice(-500))); } catch(e) {}
+}
+function logActivity(events) {
+  const log = loadActivityLog();
+  log.push(...events);
+  saveActivityLog(log);
+}
+function diffStates(prev, next) {
+  const events = [];
+  const norm = v => (v === '' || v === undefined || v === false || v === null) ? null : v;
+  const allKeys = new Set([...Object.keys(prev||{}), ...Object.keys(next||{})]);
+  allKeys.forEach(k => {
+    const a = prev ? prev[k] : undefined;
+    const b = next ? next[k] : undefined;
+    if(JSON.stringify(norm(a)) !== JSON.stringify(norm(b))) {
+      events.push({ ts: Date.now(), day: currentViewDate, field: k, from: a===undefined?null:a, to: b===undefined?null:b });
+    }
+  });
+  return events;
+}
+
+loadTodayState();
+
+// ── SCORE CALCULATION ─────────────────────────────────────
+function calcScore(s) {
+  const isYes = v => v === 'yes' || v === true;
+  const count = (items, prefix) => items.filter(i => isYes(s[prefix+i])).length;
+  const h   = count(HABITS, 'habit_');
+  const v   = count(VITAMINS, 'vitamin_');
+  const w   = count(WATER.map(x=>x.name), 'water_');
+  const h75 = count(HARD75, 'h75_');
+  const mor = count(MORNING, 'morning_');
+  const eve = count(EVENING, 'evening_');
+  const total = h+v+w+h75+mor+eve;
+  const max   = HABITS.length+VITAMINS.length+WATER.length+HARD75.length+MORNING.length+EVENING.length;
+  return { h, v, w, h75, mor, eve, total, max, pct: max>0 ? Math.round(total/max*100) : 0 };
+}
+
+function updateScore() {
+  const sc = calcScore(state);
+  document.getElementById('score-pct').textContent   = sc.pct+'%';
+  document.getElementById('score-badge').textContent = sc.total+' / '+sc.max;
+  document.getElementById('meta-habits').textContent    = sc.h+'/'+HABITS.length;
+  document.getElementById('meta-vitamins').textContent  = sc.v+'/'+VITAMINS.length;
+  document.getElementById('meta-water').textContent     = sc.w+'/'+WATER.length;
+  document.getElementById('meta-75').textContent        = sc.h75+'/'+HARD75.length;
+  document.getElementById('meta-routines').textContent  = (sc.mor+sc.eve)+'/'+(MORNING.length+EVENING.length);
+  const circ = 201.06;
+  document.getElementById('score-ring').style.strokeDashoffset = circ - (circ * sc.pct / 100);
+}
+
+// ── RENDER CHECKLIST ──────────────────────────────────────
+function renderChecklist(containerId, items, prefix, badgeId) {
+  const el = document.getElementById(containerId);
+  el.innerHTML = '';
+  items.forEach(item => {
+    const key = prefix + item;
+    // Migrate legacy boolean true → 'yes'
+    if (state[key] === true) state[key] = 'yes';
+    const div = document.createElement('div');
+    const applyClass = () => {
+      div.classList.toggle('yes', state[key] === 'yes');
+      div.classList.toggle('no',  state[key] === 'no');
+    };
+    div.className = 'check-item';
+    div.innerHTML = `<div class="check-box"></div><span class="check-label">${item}</span>`;
+    applyClass();
+
+    const setVal = (v) => {
+      state[key] = v;
+      applyClass();
+      saveTodayState();
+      updateScore();
+      if(badgeId) updateBadge(badgeId, items, prefix);
+    };
+
+    // Swipe right = yes, swipe left = no, tap = cycle (unset → yes → no → unset)
+    let startX = null, startY = null, swiped = false;
+    div.addEventListener('pointerdown', (e) => {
+      startX = e.clientX; startY = e.clientY; swiped = false;
+    });
+    div.addEventListener('pointermove', (e) => {
+      if (startX === null) return;
+      const dx = e.clientX - startX;
+      const dy = e.clientY - startY;
+      if (!swiped && Math.abs(dx) > 35 && Math.abs(dx) > Math.abs(dy)) {
+        swiped = true;
+        setVal(dx > 0 ? 'yes' : 'no');
+      }
+    });
+    const endHandler = () => {
+      if (startX === null) return;
+      if (!swiped) {
+        // tap → cycle
+        const cur = state[key];
+        setVal(cur === 'yes' ? 'no' : cur === 'no' ? null : 'yes');
+      }
+      startX = null; startY = null;
+    };
+    div.addEventListener('pointerup', endHandler);
+    div.addEventListener('pointercancel', () => { startX = null; startY = null; });
+
+    el.appendChild(div);
+  });
+  if(badgeId) updateBadge(badgeId, items, prefix);
+}
+
+function updateBadge(id, items, prefix) {
+  const done = items.filter(i => { const v = state[prefix+i]; return v === 'yes' || v === true; }).length;
+  document.getElementById(id).textContent = `${done}/${items.length}`;
+}
+
+// ── RENDER WATER ──────────────────────────────────────────
+let waterEditMode = false;
+
+function toggleWaterEdit() {
+  waterEditMode = !waterEditMode;
+  const btn = document.getElementById('water-edit-btn');
+  if(btn) btn.textContent = waterEditMode ? 'Done' : 'Edit';
+  renderWater();
+}
+
+function renderWater() {
+  const el = document.getElementById('list-water');
+  el.innerHTML = '';
+
+  if(waterEditMode) {
+    WATER.forEach((w, idx) => {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--border)';
+      const nameInput = document.createElement('input');
+      nameInput.value = w.name;
+      nameInput.style.cssText = 'flex:1;font-family:var(--mono);font-size:11px;border:1.5px solid var(--border);padding:5px 8px;border-radius:var(--r2);background:var(--bg);color:var(--text)';
+      nameInput.addEventListener('change', () => { WATER[idx].name = nameInput.value; saveWaterConfig(); });
+
+      const ozLabel = document.createElement('span');
+      ozLabel.style.cssText = 'font-family:var(--mono);font-size:11px;color:var(--text-2);min-width:48px;text-align:center';
+      ozLabel.textContent = w.oz + ' oz';
+
+      const btnStyle = 'font-family:var(--mono);font-size:13px;background:none;border:1.5px solid var(--border);width:28px;height:28px;border-radius:var(--r2);cursor:pointer;color:var(--text-2);display:flex;align-items:center;justify-content:center;flex-shrink:0';
+      const minus = document.createElement('button');
+      minus.innerHTML = '−'; minus.style.cssText = btnStyle;
+      minus.addEventListener('click', () => {
+        WATER[idx].oz = Math.max(4, WATER[idx].oz - 4);
+        ozLabel.textContent = WATER[idx].oz + ' oz';
+        saveWaterConfig();
+      });
+
+      const plus = document.createElement('button');
+      plus.innerHTML = '+'; plus.style.cssText = btnStyle;
+      plus.addEventListener('click', () => {
+        WATER[idx].oz = WATER[idx].oz + 4;
+        ozLabel.textContent = WATER[idx].oz + ' oz';
+        saveWaterConfig();
+      });
+
+      const del = document.createElement('button');
+      del.innerHTML = '✕'; del.style.cssText = btnStyle + ';color:var(--text-3);border-color:transparent';
+      del.addEventListener('click', () => { WATER.splice(idx, 1); saveWaterConfig(); renderWater(); });
+
+      row.appendChild(nameInput);
+      row.appendChild(minus);
+      row.appendChild(ozLabel);
+      row.appendChild(plus);
+      row.appendChild(del);
+      el.appendChild(row);
+    });
+
+    const addBtn = document.createElement('button');
+    addBtn.textContent = '+ Add entry';
+    addBtn.style.cssText = 'margin-top:10px;font-family:var(--mono);font-size:9px;letter-spacing:0.08em;text-transform:uppercase;background:none;border:1.5px solid var(--border);padding:7px 14px;cursor:pointer;color:var(--text-2);border-radius:var(--r2);width:100%';
+    addBtn.addEventListener('click', () => {
+      WATER.push({name:'New', oz:16});
+      saveWaterConfig();
+      renderWater();
+    });
+    el.appendChild(addBtn);
+  } else {
+    WATER.forEach(w => {
+      const key = 'water_'+w.name;
+      const div = document.createElement('div');
+      div.className = 'water-row' + (state[key] ? ' filled' : '');
+      div.innerHTML = `
+        <div class="water-icon">💧</div>
+        <div class="water-info">
+          <div class="water-name">${w.name}</div>
+          <div class="water-oz">${w.oz} oz</div>
+        </div>`;
+      div.addEventListener('click', () => {
+        state[key] = !state[key];
+        div.classList.toggle('filled', state[key]);
+        saveTodayState();
+        updateScore();
+        updateBadge('badge-water', WATER.map(x=>x.name), 'water_');
+      });
+      el.appendChild(div);
+    });
+  }
+
+  updateBadge('badge-water', WATER.map(x=>x.name), 'water_');
+}
+
+// ── RENDER WHOOP ──────────────────────────────────────────
+function renderWhoop() {
+  const connected = whoopIsConnected();
+  const el = document.getElementById('whoop-grid');
+  el.innerHTML = '';
+  whoopState.forEach((w, idx) => {
+    const max  = w.max || 100;
+    const r    = 22;
+    const circ = 2 * Math.PI * r;
+    const pct  = Math.min(w.val / max, 1);
+    const dash = circ * pct;
+    const div  = document.createElement('div');
+    div.className = 'whoop-cell';
+    const displayVal = w.label === 'Strain' ? w.val : Math.round(w.val);
+    div.innerHTML = `
+      <div class="whoop-ring" id="wring-${idx}">
+        <svg width="54" height="54" viewBox="0 0 54 54">
+          <circle cx="27" cy="27" r="${r}" fill="none" stroke="#e8e6e1" stroke-width="4"/>
+          <circle cx="27" cy="27" r="${r}" fill="none" stroke="#0f0e0c" stroke-width="4"
+            stroke-dasharray="${circ.toFixed(2)}" stroke-dashoffset="${(circ-dash).toFixed(2)}" stroke-linecap="square" id="warc-${idx}"/>
+        </svg>
+        <div class="whoop-ring-val">
+          <input id="winput-${idx}" type="text" value="${displayVal}"
+            style="font-family:var(--mono);font-size:11px;font-weight:500;width:32px;text-align:center;background:none;border:none;outline:none;color:var(--text);cursor:${connected ? 'default' : 'text'};"
+            maxlength="4" ${connected ? 'readonly' : ''}>
+        </div>
+      </div>
+      <div class="whoop-label">${w.label}</div>`;
+    el.appendChild(div);
+
+    // Live editing only when not connected to Whoop API
+    if(!connected) {
+      const input = div.querySelector(`#winput-${idx}`);
+      input.addEventListener('input', () => {
+        const num = parseFloat(input.value) || 0;
+        whoopState[idx].val = num;
+        const p2  = Math.min(num / max, 1);
+        const arc = document.getElementById(`warc-${idx}`);
+        arc.setAttribute('stroke-dashoffset', (circ - circ*p2).toFixed(2));
+        saveWhoopData(whoopState);
+      });
+    }
+  });
+}
+
+// ── METRIC INPUTS ─────────────────────────────────────────
+function bindMetricInputs() {
+  METRIC_IDS.forEach(id => {
+    const el = document.getElementById(id);
+    if(!el) return;
+    el.value = state[id] || '';
+    el.addEventListener('input', () => {
+      state[id] = el.value;
+      saveTodayState();
+    });
+  });
+  // Sync AM/PM button labels from state
+  ['m-bed-ampm', 'm-wake-ampm'].forEach(key => {
+    const val = state[key] || (key === 'm-bed-ampm' ? 'pm' : 'am');
+    state[key] = val;
+    const btn = document.getElementById(key + '-btn');
+    if(btn) btn.textContent = val.toUpperCase();
+  });
+}
+
+function toggleAmPm(stateKey, btnId) {
+  const current = state[stateKey] || (stateKey === 'm-bed-ampm' ? 'pm' : 'am');
+  const next = current === 'am' ? 'pm' : 'am';
+  state[stateKey] = next;
+  const btn = document.getElementById(btnId);
+  if(btn) btn.textContent = next.toUpperCase();
+  saveTodayState();
+}
+
+// ── DATE / TIME ───────────────────────────────────────────
+function updateDateTime() {
+  const now    = new Date();
+  const DAYS   = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  document.getElementById('today-headline').textContent =
+    `${DAYS[now.getDay()]}, ${MONTHS[now.getMonth()]} ${now.getDate()}`;
+  const h = now.getHours(), m = now.getMinutes().toString().padStart(2,'0');
+  document.getElementById('today-time').textContent = `${h%12||12}:${m} ${h>=12?'pm':'am'}`;
+}
+updateDateTime();
+setInterval(updateDateTime, 30000);
+
+// ── WEEKLY BAR CHART (uses real stored data for this week) ─
+function getWeekDays() {
+  const today = new Date();
+  const dow   = today.getDay(); // 0=Sun
+  const monday = new Date(today);
+  monday.setDate(today.getDate() - ((dow+6)%7));
+  const result = [];
+  for(let i=0;i<7;i++) {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    const label = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][i];
+    const saved = loadDay(key);
+    const pct = saved ? calcScore(saved).pct : null;
+    const isToday = key === todayKey();
+    result.push({label, pct, isToday});
+  }
+  return result;
+}
+
+function renderWeeklyBars() {
+  const week = getWeekDays();
+  const el   = document.getElementById('weekly-bar-chart');
+  el.innerHTML = '';
+  const maxH = 50;
+  week.forEach(({label, pct, isToday}) => {
+    const display = pct !== null ? pct : 0;
+    const barH    = Math.max(2, Math.round(display / 100 * maxH));
+    const col     = document.createElement('div');
+    col.className = 'bar-col';
+    col.innerHTML = `
+      <div style="font-family:var(--mono);font-size:9px;color:var(--text-3);margin-bottom:2px">${pct!==null?pct+'%':'–'}</div>
+      <div class="bar ${isToday?'':'light'}" style="height:${barH}px"></div>
+      <div class="bar-x">${label}</div>`;
+    el.appendChild(col);
+  });
+}
+
+// ── WEEKLY AVERAGES ───────────────────────────────────────
+function renderWeeklyAverages() {
+  const week = getWeekDays();
+  const loggedDays = week.filter(d => {
+    const saved = loadDay(todayKeyFromLabel(d));
+    return saved !== null;
+  });
+  // Just recalc pcts from stored days
+  const pcts = week.map(d => d.pct).filter(p => p !== null);
+  const avgCompletion = pcts.length ? Math.round(pcts.reduce((a,b)=>a+b,0)/pcts.length) : 0;
+
+  // Update the weekly stats displayed
+  const el = document.querySelector('#stats-panel-weekly .week-grid');
+  if(el) {
+    const first = el.querySelector('.week-stat .ws-val');
+    if(first) first.innerHTML = avgCompletion + '<span style="font-size:13px;color:var(--text-2)">%</span>';
+  }
+}
+
+function todayKeyFromLabel(d) { return null; } // placeholder
+
+// ── STREAKS (computed from localStorage) ──────────────────
+function computeStreaks() {
+  const allKeys = getAllDayKeys().sort(); // ascending
+  const streakFor = (prefix, item) => {
+    let streak = 0;
+    const sorted = [...allKeys].reverse(); // most recent first
+    for(const k of sorted) {
+      const day = loadDay(k);
+      if(day && day[prefix+item]) streak++;
+      else break;
+    }
+    return streak;
+  };
+  return HABITS.map(h => ({
+    name: h.length > 12 ? h.slice(0,12)+'…' : h,
+    streak: streakFor('habit_', h),
+    total: allKeys.length || 1
+  }));
+}
+
+function renderStreaks() {
+  const data = computeStreaks();
+  const maxStreak = Math.max(...data.map(d=>d.streak), 1);
+  const el = document.getElementById('streak-list');
+  el.innerHTML = '';
+  data.forEach(d => {
+    const pct = Math.round(d.streak / Math.max(maxStreak, 1) * 100);
+    const div = document.createElement('div');
+    div.className = 'streak-item';
+    div.innerHTML = `
+      <span class="streak-name">${d.name}</span>
+      <div class="streak-bar-wrap"><div class="streak-bar" style="width:${pct}%"></div></div>
+      <span class="streak-val">${d.streak}d</span>`;
+    el.appendChild(div);
+  });
+}
+
+// ── CALENDAR (real data) ──────────────────────────────────
+function renderCalendar() {
+  const el = document.getElementById('cal-grid');
+  el.innerHTML = '';
+  ['S','M','T','W','T','F','S'].forEach(d => {
+    const div = document.createElement('div');
+    div.className = 'cal-day-label';
+    div.textContent = d;
+    el.appendChild(div);
+  });
+  const now        = new Date();
+  const year       = now.getFullYear();
+  const month      = now.getMonth();
+  const firstDay   = new Date(year, month, 1).getDay();
+  const daysInMonth= new Date(year, month+1, 0).getDate();
+
+  // Empty cells before 1st
+  for(let i=0;i<firstDay;i++) {
+    const div = document.createElement('div');
+    div.className = 'cal-day empty';
+    el.appendChild(div);
+  }
+
+  for(let d=1;d<=daysInMonth;d++) {
+    const key  = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const saved = loadDay(key);
+    const div  = document.createElement('div');
+    div.className = 'cal-day has-data';
+    div.textContent = d;
+    if(d === now.getDate()) div.classList.add('today');
+    if(saved) {
+      const pct = calcScore(saved).pct;
+      if(pct >= 85)      div.classList.add('pct-high');
+      else if(pct >= 60) div.classList.add('pct-med');
+      else               div.classList.add('pct-low');
+    }
+    el.appendChild(div);
+  }
+}
+
+// ── MONTHLY HABITS ────────────────────────────────────────
+function renderMonthlyHabits() {
+  const now   = new Date();
+  const year  = now.getFullYear();
+  const month = now.getMonth();
+  const allKeys = getAllDayKeys().filter(k => {
+    const [y,m] = k.split('-').map(Number);
+    return y === year && m === month+1;
+  });
+  const pctFor = (prefix, item) => {
+    if(!allKeys.length) return 0;
+    const done = allKeys.filter(k => { const d=loadDay(k); return d && d[prefix+item]; }).length;
+    return Math.round(done/allKeys.length*100);
+  };
+  const data = HABITS.map(h => ({
+    name: h.length > 14 ? h.slice(0,14)+'…' : h,
+    pct: pctFor('habit_', h)
+  })).sort((a,b) => b.pct - a.pct);
+  const el = document.getElementById('monthly-habit-list');
+  el.innerHTML = '';
+  data.forEach(d => {
+    const div = document.createElement('div');
+    div.className = 'streak-item';
+    div.innerHTML = `
+      <span class="streak-name">${d.name}</span>
+      <div class="streak-bar-wrap"><div class="streak-bar" style="width:${d.pct}%"></div></div>
+      <span class="streak-val">${d.pct}%</span>`;
+    el.appendChild(div);
+  });
+}
+
+// ── MONTHLY STATS ─────────────────────────────────────────
+function renderMonthlyStats() {
+  const now   = new Date();
+  const year  = now.getFullYear();
+  const month = now.getMonth();
+  const allKeys = getAllDayKeys().filter(k => {
+    const [y,m] = k.split('-').map(Number);
+    return y === year && m === month+1;
+  });
+  const pcts = allKeys.map(k => calcScore(loadDay(k) || {}).pct);
+  const avg  = pcts.length ? Math.round(pcts.reduce((a,b)=>a+b,0)/pcts.length) : 0;
+  const perfect = pcts.filter(p => p >= 95).length;
+
+  // Update compliance ring
+  const circ = 226.19;
+  const ring = document.querySelector('#stats-panel-monthly circle:last-child');
+  if(ring) ring.setAttribute('stroke-dashoffset', (circ - circ * avg/100).toFixed(2));
+  const pctEl = document.querySelector('#stats-panel-monthly .mc-pct');
+  if(pctEl) pctEl.textContent = avg+'%';
+
+  // Update stat rows
+  const rows = document.querySelectorAll('#stats-panel-monthly .mc-stats .stat-value');
+  if(rows[0]) rows[0].textContent = allKeys.length;
+  if(rows[1]) rows[1].textContent = perfect;
+}
+
+// ── ACTIVITY LOG RENDER ───────────────────────────────────
+function prettyFieldName(field) {
+  if(field.startsWith('habit_'))   return { cat: 'Habit',   name: field.slice(6) };
+  if(field.startsWith('vitamin_')) return { cat: 'Vitamin', name: field.slice(8) };
+  if(field.startsWith('water_'))   return { cat: 'Water',   name: field.slice(6) };
+  if(field.startsWith('h75_'))     return { cat: '75 Hard', name: field.slice(4) };
+  if(field.startsWith('morning_')) return { cat: 'Morning', name: field.slice(8) };
+  if(field.startsWith('evening_')) return { cat: 'Evening', name: field.slice(8) };
+  if(field === 'journal')          return { cat: 'Journal', name: 'Entry' };
+  const metricMap = {
+    'm-bed':'Bed time','m-bed-ampm':'Bed AM/PM','m-wake':'Wake time','m-wake-ampm':'Wake AM/PM',
+    'm-hours':'Hours slept','m-weight':'Weight','m-rhr':'RHR','m-body-fat':'Body fat'
+  };
+  if(metricMap[field]) return { cat: 'Metric', name: metricMap[field] };
+  return { cat: 'Field', name: field };
+}
+function formatRelativeTime(ts) {
+  const diff = Date.now() - ts;
+  const s = Math.floor(diff/1000);
+  if(s < 60) return 'just now';
+  const m = Math.floor(s/60);
+  if(m < 60) return m+'m ago';
+  const h = Math.floor(m/60);
+  if(h < 24) return h+'h ago';
+  const d = Math.floor(h/24);
+  if(d < 7) return d+'d ago';
+  const date = new Date(ts);
+  return `${date.getMonth()+1}/${date.getDate()}`;
+}
+function formatValueChange(from, to) {
+  const toStr = v => {
+    if(v === null || v === undefined || v === '' || v === false) return '—';
+    if(v === true || v === 'yes') return 'yes';
+    if(v === 'no') return 'no';
+    const s = String(v);
+    return s.length > 30 ? s.slice(0,30)+'…' : s;
+  };
+  const f = toStr(from), t = toStr(to);
+  if(f === '—' && t !== '—') return `added · ${t}`;
+  if(f !== '—' && t === '—') return `cleared · was ${f}`;
+  return `${f} → ${t}`;
+}
+function renderActivityLog() {
+  const el = document.getElementById('activity-list');
+  if(!el) return;
+  const log = loadActivityLog().slice().reverse();
+  const badge = document.getElementById('activity-badge');
+  if(badge) badge.textContent = log.length + (log.length === 1 ? ' change' : ' changes');
+  if(!log.length){
+    el.innerHTML = '<div style="padding:16px 0;text-align:center;font-family:var(--mono);font-size:11px;color:var(--text-3)">No activity yet.</div>';
+    return;
+  }
+  el.innerHTML = '';
+  log.slice(0, 100).forEach(ev => {
+    const p = prettyFieldName(ev.field);
+    const when = formatRelativeTime(ev.ts);
+    const valStr = formatValueChange(ev.from, ev.to);
+    const row = document.createElement('div');
+    row.style.cssText = 'padding:8px 0;border-bottom:1px solid var(--border);font-family:var(--mono);font-size:11px;display:flex;flex-direction:column;gap:2px';
+    row.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
+        <span style="color:var(--text);font-weight:500">${p.cat}: ${p.name}</span>
+        <span style="color:var(--text-3);font-size:10px">${when}</span>
+      </div>
+      <div style="color:var(--text-2);font-size:10px">${valStr} · ${ev.day}</div>
+    `;
+    el.appendChild(row);
+  });
+}
+
+// ── HISTORY ───────────────────────────────────────────────
+function renderHistory() {
+  const el      = document.getElementById('history-list');
+  el.innerHTML  = '';
+  const allKeys = getAllDayKeys(); // most recent first
+  const DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const MON_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+  if(!allKeys.length) {
+    el.innerHTML = '<div style="padding:16px 0;text-align:center;font-family:var(--mono);font-size:11px;color:var(--text-3)">No history yet. Start logging today.</div>';
+    return;
+  }
+  const el2 = document.getElementById('history-list').closest('.card').querySelector('.card-badge');
+  if(el2) el2.textContent = allKeys.length + ' ' + (allKeys.length===1?'entry':'entries');
+
+  allKeys.forEach(key => {
+    const [y,m,d] = key.split('-').map(Number);
+    const date  = new Date(y, m-1, d);
+    const label = `${DAY_NAMES[date.getDay()]} ${MON_NAMES[date.getMonth()]} ${d}`;
+    const saved = loadDay(key);
+    const pct   = saved ? calcScore(saved).pct : 0;
+    const div   = document.createElement('div');
+    div.className = 'history-item';
+    div.innerHTML = `
+      <span class="hi-date">${label}</span>
+      <div class="hi-bar-wrap"><div class="hi-bar" style="width:${pct}%"></div></div>
+      <span class="hi-pct">${pct}%</span>`;
+    el.appendChild(div);
+  });
+}
+
+// ── LINE CHARTS ───────────────────────────────────────────
+function makePath(data, vw, vh, pad, color='#0f0e0c', strokeW=1.5) {
+  if(data.length < 2) return '';
+  const min = Math.min(...data), max = Math.max(...data), range = max-min||1;
+  const pts = data.map((v,i) => {
+    const x = pad + (i/(data.length-1)) * (vw-pad*2);
+    const y = pad + (1-(v-min)/range) * (vh-pad*2);
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  });
+  return `<polyline points="${pts.join(' ')}" fill="none" stroke="${color}" stroke-width="${strokeW}" stroke-linejoin="round" stroke-linecap="round"/>`;
+}
+
+function makeArea(data, vw, vh, pad) {
+  if(data.length < 2) return '';
+  const min = Math.min(...data), max = Math.max(...data), range = max-min||1;
+  const pts = data.map((v,i) => {
+    const x = pad + (i/(data.length-1)) * (vw-pad*2);
+    const y = pad + (1-(v-min)/range) * (vh-pad*2);
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  });
+  const last  = pts[pts.length-1].split(',');
+  const first = pts[0].split(',');
+  return `<path d="M ${pts.join(' L ')} L ${last[0]},${vh-pad} L ${first[0]},${vh-pad} Z" fill="#0f0e0c" opacity="0.05"/>`;
+}
+
+function renderLineChart(svgId, data, vw=380, vh=120, pad=10) {
+  const el = document.getElementById(svgId);
+  if(!el) return;
+  if(data.length < 2) {
+    el.innerHTML = `<text x="${vw/2}" y="${vh/2}" text-anchor="middle" font-family="monospace" font-size="11" fill="#9a9790">Not enough data yet</text>`;
+    return;
+  }
+  el.innerHTML = makeArea(data, vw, vh, pad) + makePath(data, vw, vh, pad, '#0f0e0c', 1.5);
+}
+
+// Build trend data from localStorage
+function buildTrendData() {
+  const keys = getAllDayKeys().slice(0,30).reverse(); // oldest→newest, max 30
+  const sleep=[],weight=[],rhr=[],water=[],bf=[],recovery=[],completion=[],strain=[];
+  keys.forEach(k => {
+    const d = loadDay(k); if(!d) return;
+    if(d['m-hours'])  sleep.push(parseFloat(d['m-hours']));
+    if(d['m-weight']) weight.push(parseFloat(d['m-weight']));
+    if(d['m-rhr'])    rhr.push(parseFloat(d['m-rhr']));
+    if(d['m-bf'])     bf.push(parseFloat(d['m-bf']));
+    // water: count checked * avg oz
+    const waterOz = WATER.filter(w=>d['water_'+w.name]).reduce((a,w)=>a+w.oz,0);
+    if(waterOz>0) water.push(waterOz);
+    // whoop from whoop storage
+    try {
+      const wraw = localStorage.getItem(STORE_PREFIX+'whoop_'+k);
+      if(wraw) {
+        const ws = JSON.parse(wraw);
+        if(ws[1]) recovery.push(ws[1].val);
+        if(ws[2]) strain.push(ws[2].val);
+      }
+    } catch(e){}
+    completion.push(calcScore(d).pct);
+  });
+
+  return { sleep, weight, rhr, water, bf, recovery, completion, strain };
+}
+
+let trendData = {};
+let activeChart = 'sleep';
+
+const CHART_META = {
+  sleep:      { label:'Sleep hours',       avg: d => (d.reduce((a,b)=>a+b,0)/d.length).toFixed(1)+'h' },
+  weight:     { label:'Weight (lbs)',      avg: d => (d.reduce((a,b)=>a+b,0)/d.length).toFixed(1)+' lbs' },
+  rhr:        { label:'Resting HR (bpm)',  avg: d => Math.round(d.reduce((a,b)=>a+b,0)/d.length)+' bpm' },
+  water:      { label:'Water intake (oz)', avg: d => Math.round(d.reduce((a,b)=>a+b,0)/d.length)+' oz' },
+};
+
+function renderTrendChart(key) {
+  const d   = trendData[key] || [];
+  const meta = CHART_META[key];
+  renderLineChart('trend-svg', d, 380, 120, 12);
+  document.getElementById('trend-chart-title').textContent  = meta.label;
+  document.getElementById('trend-chart-avg').textContent    = d.length ? 'avg '+meta.avg(d) : '–';
+}
+
+function renderAllTrendCharts() {
+  trendData = buildTrendData();
+  renderTrendChart(activeChart);
+  renderLineChart('bf-svg',         trendData.bf,         380, 90, 10);
+  renderLineChart('recovery-svg',   trendData.recovery,   380, 90, 10);
+  renderLineChart('completion-svg', trendData.completion, 380, 90, 10);
+  renderLineChart('strain-svg',     trendData.strain,     380, 90, 10);
+}
+
+document.getElementById('trend-tabs').addEventListener('click', e => {
+  const btn = e.target.closest('.trend-tab');
+  if(!btn) return;
+  document.querySelectorAll('.trend-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  activeChart = btn.dataset.chart;
+  renderTrendChart(activeChart);
+});
+
+// ── NAVIGATION ────────────────────────────────────────────
+let activeStatsPanel = 'weekly';
+
+function switchStatsPanel(panel) {
+  activeStatsPanel = panel;
+  ['weekly','monthly','trends'].forEach(p => {
+    const el = document.getElementById('stats-panel-'+p);
+    if(el) el.style.display = p === panel ? 'block' : 'none';
+  });
+  document.querySelectorAll('.trend-tab[data-panel]').forEach(t => {
+    t.classList.toggle('active', t.dataset.panel === panel);
+  });
+  // Update header text
+  const titles = { weekly: 'Weekly', monthly: 'Monthly', trends: 'Trends' };
+  const titleEl = document.getElementById('stats-title');
+  if(titleEl) titleEl.textContent = titles[panel] || '';
+  // Refresh data
+  if(panel === 'weekly')  {
+    renderWeeklyHeader();
+    const hl = document.getElementById('stats-headline');
+    const sub = document.getElementById('stats-sub');
+    const wRange = document.getElementById('weekly-range-el');
+    const wNum   = document.getElementById('week-num-el');
+    if(hl && wRange) hl.textContent = wRange.textContent;
+    if(sub && wNum)  sub.textContent = wNum.textContent;
+    renderWeeklyBars(); renderStreaks(); renderWeeklyStats();
+  }
+  if(panel === 'monthly') {
+    renderMonthlyHeader();
+    const hl  = document.getElementById('stats-headline');
+    const sub = document.getElementById('stats-sub');
+    const now = new Date();
+    const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    if(hl)  hl.textContent  = MONTHS[now.getMonth()] + ' ' + now.getFullYear();
+    const mDays = document.getElementById('month-days-el');
+    if(sub && mDays) sub.textContent = mDays.textContent;
+    renderCalendar(); renderMonthlyHabits(); renderMonthlyStats(); renderMonthlyAverages();
+  }
+  if(panel === 'trends') {
+    const hl = document.getElementById('stats-headline');
+    const sub = document.getElementById('stats-sub');
+    if(hl)  hl.textContent  = 'Last 30 days';
+    if(sub) sub.textContent = '';
+    renderAllTrendCharts();
+  }
+}
+
+document.querySelectorAll('.nav-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const screen = btn.dataset.screen;
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('screen-'+screen).classList.add('active');
+    btn.classList.add('active');
+    if(screen === 'stats')   { switchStatsPanel(activeStatsPanel); }
+    if(screen === 'history') { renderHistory(); renderActivityLog(); }
+  });
+});
+
+// Stats sub-tab clicks
+document.querySelectorAll('.trend-tab[data-panel]').forEach(tab => {
+  tab.addEventListener('click', () => switchStatsPanel(tab.dataset.panel));
+});
+
+// ── WHOOP OAUTH + API ─────────────────────────────────────
+const WHOOP_CLIENT_ID     = '8e75b9f3-c0d4-4a70-abea-c91f7e69dd8e';
+const WHOOP_CLIENT_SECRET = '3cccde6bc26b6cca876fbed95bd6f7f061f1a6b0c81d52fc409c4c7ef6d164fa';
+const WHOOP_REDIRECT_URI  = 'https://humanformula.pages.dev';
+const WHOOP_AUTH_URL      = 'https://api.prod.whoop.com/oauth/oauth2/auth';
+const WHOOP_TOKEN_URL     = '/whoop-token';
+const WHOOP_API_BASE      = '/whoop-api';
+const WHOOP_SCOPES        = 'read:recovery read:sleep read:workout read:cycles read:body_measurement offline';
+
+function whoopGetToken()    { return localStorage.getItem('lifeos_whoop_access_token'); }
+function whoopIsConnected() { return !!whoopGetToken(); }
+
+function whoopConnect() {
+  const params = new URLSearchParams({
+    client_id:     WHOOP_CLIENT_ID,
+    redirect_uri:  WHOOP_REDIRECT_URI,
+    response_type: 'code',
+    scope:         WHOOP_SCOPES,
+    state:         'orma_whoop_auth'
+  });
+  window.location.href = `${WHOOP_AUTH_URL}?${params}`;
+}
+
+function whoopSaveTokens({ access_token, refresh_token, expires_in }) {
+  localStorage.setItem('lifeos_whoop_access_token', access_token);
+  if(refresh_token) localStorage.setItem('lifeos_whoop_refresh_token', refresh_token);
+  localStorage.setItem('lifeos_whoop_expires_at', Date.now() + (expires_in * 1000));
+}
+
+async function whoopExchangeCode(code) {
+  try {
+    const resp = await fetch(WHOOP_TOKEN_URL, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body:    new URLSearchParams({
+        grant_type:    'authorization_code',
+        code,
+        client_id:     WHOOP_CLIENT_ID,
+        client_secret: WHOOP_CLIENT_SECRET,
+        redirect_uri:  WHOOP_REDIRECT_URI,
+      })
+    });
+    if(!resp.ok) throw new Error('Token exchange failed: ' + resp.status);
+    whoopSaveTokens(await resp.json());
+    return true;
+  } catch(e) {
+    console.error('Whoop exchange error:', e);
+    return false;
+  }
+}
+
+async function whoopEnsureToken() {
+  const expiresAt = parseInt(localStorage.getItem('lifeos_whoop_expires_at') || '0');
+  if(Date.now() < expiresAt - 60000) return true; // still valid
+  // Try refresh
+  const refreshToken = localStorage.getItem('lifeos_whoop_refresh_token');
+  if(!refreshToken) return false;
+  try {
+    const resp = await fetch(WHOOP_TOKEN_URL, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body:    new URLSearchParams({
+        grant_type:    'refresh_token',
+        refresh_token: refreshToken,
+        client_id:     WHOOP_CLIENT_ID,
+        client_secret: WHOOP_CLIENT_SECRET,
+      })
+    });
+    if(!resp.ok) throw new Error('Refresh failed');
+    whoopSaveTokens(await resp.json());
+    return true;
+  } catch(e) {
+    whoopDisconnect();
+    return false;
+  }
+}
+
+async function whoopFetchData() {
+  if(!whoopIsConnected()) return;
+  const badge = document.getElementById('whoop-badge');
+  if(badge) badge.textContent = 'Syncing…';
+  const ok = await whoopEnsureToken();
+  if(!ok) { updateWhoopUI(); return; }
+
+  const headers = { Authorization: `Bearer ${whoopGetToken()}` };
+  try {
+    const [recResp, sleepResp, cycleResp, bodyResp, workoutResp] = await Promise.all([
+      fetch(`${WHOOP_API_BASE}/recovery?limit=1`,           { headers }),
+      fetch(`${WHOOP_API_BASE}/activity/sleep?limit=1`,     { headers }),
+      fetch(`${WHOOP_API_BASE}/cycle?limit=1`,              { headers }),
+      fetch(`${WHOOP_API_BASE}/user/measurement/body`,      { headers }),
+      fetch(`${WHOOP_API_BASE}/activity/workout?limit=25`,  { headers }),
+    ]);
+    const [recData, sleepData, cycleData, bodyData, workoutData] = await Promise.all([
+      recResp.ok     ? recResp.json()     : null,
+      sleepResp.ok   ? sleepResp.json()   : null,
+      cycleResp.ok   ? cycleResp.json()   : null,
+      bodyResp.ok    ? bodyResp.json()    : null,
+      workoutResp.ok ? workoutResp.json() : null,
+    ]);
+
+    const recovery = recData?.records?.[0]?.score?.recovery_score                    ?? null;
+    const rhr      = recData?.records?.[0]?.score?.resting_heart_rate                ?? null;
+    const sleep    = sleepData?.records?.[0]?.score?.sleep_performance_percentage    ?? null;
+    const strain   = cycleData?.records?.[0]?.score?.strain                          ?? null;
+
+    // Sleep timing — use the most recent non-nap sleep record
+    const sleepRecords = sleepData?.records ?? [];
+    const mainSleep    = sleepRecords.find(r => !r.nap) ?? sleepRecords[0] ?? null;
+    const sleepStart   = mainSleep?.start ?? null;
+    const sleepEnd     = mainSleep?.end   ?? null;
+    const stageSummary = mainSleep?.score?.stage_summary ?? null;
+    const sleepHours   = stageSummary
+      ? parseFloat(((stageSummary.total_in_bed_time_milli - (stageSummary.total_awake_time_milli || 0)) / 3600000).toFixed(1))
+      : (sleepStart && sleepEnd
+          ? parseFloat(((new Date(sleepEnd) - new Date(sleepStart)) / 3600000).toFixed(1))
+          : null);
+
+    whoopState = [
+      { label: 'Sleep',    val: sleep    !== null ? Math.round(sleep)             : whoopState[0].val, max: 100 },
+      { label: 'Recovery', val: recovery !== null ? Math.round(recovery)          : whoopState[1].val, max: 100 },
+      { label: 'Strain',   val: strain   !== null ? parseFloat(strain.toFixed(1)) : whoopState[2].val, max: 21  },
+    ];
+    saveWhoopData(whoopState);
+
+    // Helper: format an ISO timestamp to H:MM in local time (no leading zero)
+    function fmtTime(iso) {
+      if(!iso) return null;
+      const d = new Date(iso);
+      return `${d.getHours() % 12 || 12}:${String(d.getMinutes()).padStart(2, '0')}`;
+    }
+
+    // Fill daily metrics from Whoop (always overwrites — Whoop is source of truth)
+    function fillMetric(id, value) {
+      if(value === null || value === undefined) return;
+      const strVal = String(value);
+      state[id] = strVal;
+      const el = document.getElementById(id);
+      if(el) el.value = strVal;
+    }
+
+    // Helper: compute AM/PM from ISO timestamp
+    function ampmFromIso(iso) {
+      if(!iso) return null;
+      return new Date(iso).getHours() >= 12 ? 'pm' : 'am';
+    }
+
+    const bedVal    = fmtTime(sleepStart);
+    const wakeVal   = fmtTime(sleepEnd);
+    const bedAmpm   = ampmFromIso(sleepStart);
+    const wakeAmpm  = ampmFromIso(sleepEnd);
+    const hoursVal  = sleepHours;
+    const rhrVal    = rhr !== null ? Math.round(rhr) : null;
+
+    // Weight from body measurement (kg → lbs)
+    let weightVal = null;
+    if(bodyData && bodyData.weight_kilogram) {
+      weightVal = Math.round(bodyData.weight_kilogram * 2.20462 * 10) / 10;
+    }
+
+    fillMetric('m-bed',       bedVal);
+    fillMetric('m-wake',      wakeVal);
+    fillMetric('m-hours',     hoursVal);
+    fillMetric('m-rhr',       rhrVal);
+    fillMetric('m-weight',    weightVal);
+    // AM/PM is a button, not an input — update state + button text directly
+    if(bedAmpm){
+      state['m-bed-ampm'] = bedAmpm;
+      const b = document.getElementById('m-bed-ampm-btn');
+      if(b) b.textContent = bedAmpm.toUpperCase();
+    }
+    if(wakeAmpm){
+      state['m-wake-ampm'] = wakeAmpm;
+      const b = document.getElementById('m-wake-ampm-btn');
+      if(b) b.textContent = wakeAmpm.toUpperCase();
+    }
+
+    // Auto-check 75 Hard workout habits based on detected workouts for currentViewDate
+    const workouts = workoutData?.records ?? [];
+    const dayWorkouts = workouts.filter(w => {
+      if(!w.start || !w.end) return false;
+      const startLocal = new Date(w.start);
+      const ymd = `${startLocal.getFullYear()}-${String(startLocal.getMonth()+1).padStart(2,'0')}-${String(startLocal.getDate()).padStart(2,'0')}`;
+      if(ymd !== currentViewDate) return false;
+      const durMin = (new Date(w.end) - new Date(w.start)) / 60000;
+      return durMin >= 45;
+    });
+    if(dayWorkouts.length > 0) {
+      state['h75_Workout 45 min'] = 'yes';
+      // Outdoor detection: workout has distance_meter (GPS-tracked) or altitude gain
+      const hasOutdoor = dayWorkouts.some(w => {
+        const dist = w.score?.distance_meter;
+        const alt  = w.score?.altitude_gain_meter;
+        return (dist && dist > 0) || (alt && alt > 0);
+      });
+      if(hasOutdoor) state['h75_Outdoor workout 45 min'] = 'yes';
+    }
+
+    saveTodayState();
+    // Re-render UI so changes appear immediately
+    renderChecklist('list-75', HARD75, 'h75_', 'badge-75');
+    updateScore();
+
+    localStorage.setItem('lifeos_whoop_last_sync', new Date().toISOString());
+    renderWhoop();
+    updateWhoopUI();
+  } catch(e) {
+    console.error('Whoop fetch error:', e);
+    if(badge) badge.textContent = 'Sync error';
+  }
+}
+
+function whoopDisconnect() {
+  ['lifeos_whoop_access_token','lifeos_whoop_refresh_token',
+   'lifeos_whoop_expires_at','lifeos_whoop_last_sync'].forEach(k => localStorage.removeItem(k));
+  whoopState = WHOOP_DEFAULTS.map(w => ({...w}));
+  updateWhoopUI();
+  renderWhoop();
+}
+
+function whoopFormatSync(iso) {
+  const diff = Math.floor((Date.now() - new Date(iso)) / 60000);
+  if(diff < 1)  return 'just now';
+  if(diff < 60) return diff + 'm ago';
+  return Math.floor(diff / 60) + 'h ago';
+}
+
+function updateWhoopUI() {
+  const connected  = whoopIsConnected();
+  const badge      = document.getElementById('whoop-badge');
+  const connectBtn = document.getElementById('whoop-connect-btn');
+  const syncRow    = document.getElementById('whoop-sync-row');
+  const grid       = document.getElementById('whoop-grid');
+
+  if(badge) {
+    if(connected) {
+      const last = localStorage.getItem('lifeos_whoop_last_sync');
+      badge.textContent = last ? 'Synced ' + whoopFormatSync(last) : 'Connected';
+    } else {
+      badge.textContent = 'Not connected';
+    }
+  }
+  if(connectBtn) connectBtn.style.display = connected ? 'none'  : 'block';
+  if(syncRow)    syncRow.style.display    = connected ? 'flex'  : 'none';
+  if(grid)       grid.style.display       = connected ? 'grid'  : 'none';
+}
+
+async function whoopHandleCallback() {
+  const params = new URLSearchParams(window.location.search);
+  const code   = params.get('code');
+  const st     = params.get('state');
+  if(code && st === 'orma_whoop_auth') {
+    window.history.replaceState({}, document.title, window.location.pathname);
+    const badge = document.getElementById('whoop-badge');
+    if(badge) badge.textContent = 'Connecting…';
+    const ok = await whoopExchangeCode(code);
+    if(ok) {
+      await whoopFetchData();
+    } else {
+      if(badge) badge.textContent = 'Auth failed — try again';
+    }
+  }
+}
+
+// ── DATE PICKER ───────────────────────────────────────────
+let dpViewYear, dpViewMonth;
+function openDatePicker() {
+  const [y, m] = currentViewDate.split('-').map(Number);
+  dpViewYear = y;
+  dpViewMonth = m - 1;
+  document.getElementById('date-picker-overlay').style.display = 'flex';
+  renderDatePicker();
+}
+function closeDatePicker() {
+  document.getElementById('date-picker-overlay').style.display = 'none';
+}
+function renderDatePicker() {
+  const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  document.getElementById('dp-title').textContent = `${MONTHS[dpViewMonth]} ${dpViewYear}`;
+  const el = document.getElementById('dp-grid');
+  el.innerHTML = '';
+  ['S','M','T','W','T','F','S'].forEach(d => {
+    const div = document.createElement('div');
+    div.className = 'cal-day-label';
+    div.textContent = d;
+    el.appendChild(div);
+  });
+  const firstDay    = new Date(dpViewYear, dpViewMonth, 1).getDay();
+  const daysInMonth = new Date(dpViewYear, dpViewMonth+1, 0).getDate();
+  const tKey = todayKey();
+  for(let i=0;i<firstDay;i++){
+    const div = document.createElement('div');
+    div.className = 'cal-day empty';
+    el.appendChild(div);
+  }
+  for(let d=1;d<=daysInMonth;d++){
+    const key = `${dpViewYear}-${String(dpViewMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const div = document.createElement('div');
+    div.className = 'cal-day has-data';
+    div.textContent = d;
+    if(key === tKey) div.classList.add('today');
+    if(key > tKey){
+      div.classList.add('empty');
+      div.style.opacity = '0.3';
+      div.style.cursor = 'default';
+    } else {
+      const saved = loadDay(key);
+      if(saved){
+        const pct = calcScore(saved).pct;
+        if(pct >= 85)      div.classList.add('pct-high');
+        else if(pct >= 60) div.classList.add('pct-med');
+        else               div.classList.add('pct-low');
+      }
+      div.addEventListener('click', () => {
+        currentViewDate = key;
+        whoopState = loadWhoopData(currentViewDate);
+        loadTodayState();
+        renderTodayScreen();
+        closeDatePicker();
+      });
+    }
+    el.appendChild(div);
+  }
+}
+document.getElementById('dp-prev').addEventListener('click', () => {
+  dpViewMonth--;
+  if(dpViewMonth < 0){ dpViewMonth = 11; dpViewYear--; }
+  renderDatePicker();
+});
+document.getElementById('dp-next').addEventListener('click', () => {
+  // Don't go past current month
+  const now = new Date();
+  if(dpViewYear === now.getFullYear() && dpViewMonth === now.getMonth()) return;
+  dpViewMonth++;
+  if(dpViewMonth > 11){ dpViewMonth = 0; dpViewYear++; }
+  renderDatePicker();
+});
+
+// ── DAY NAVIGATION ────────────────────────────────────────
+function navigateDay(delta) {
+  const [y, m, d] = currentViewDate.split('-').map(Number);
+  const date = new Date(y, m-1, d);
+  date.setDate(date.getDate() + delta);
+  const newKey = `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+  if(newKey > todayKey()) return; // can't go into the future
+  currentViewDate = newKey;
+  whoopState = loadWhoopData(currentViewDate);
+  loadTodayState();
+  renderTodayScreen();
+}
+
+function renderTodayScreen() {
+  const [y, m, d] = currentViewDate.split('-').map(Number);
+  const date  = new Date(y, m-1, d);
+  const DAYS  = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const MONS  = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const isToday = currentViewDate === todayKey();
+  const isPast  = currentViewDate < todayKey();
+
+  // Update headline
+  document.getElementById('today-headline').textContent = `${DAYS[date.getDay()]}, ${MONS[date.getMonth()]} ${d}`;
+
+  // Update page title label (TODAY / N DAYS AGO / UPCOMING)
+  const titleEl = document.getElementById('today-page-title');
+  if(titleEl) {
+    if(isToday) {
+      titleEl.textContent = 'Today';
+    } else if(isPast) {
+      const [ty, tm, td] = todayKey().split('-').map(Number);
+      const todayDate = new Date(ty, tm-1, td);
+      const viewDate  = new Date(y, m-1, d);
+      const diffDays  = Math.round((todayDate - viewDate) / 86400000);
+      titleEl.textContent = diffDays === 1 ? '1 day ago' : `${diffDays} days ago`;
+    } else {
+      titleEl.textContent = 'Upcoming';
+    }
+  }
+
+  // Update day counter / label
+  const dayEl = document.getElementById('day-num-el');
+  if(dayEl) dayEl.textContent = isToday ? 'Day ' + getDayNumber() : MONS[date.getMonth()] + ' ' + d;
+
+  // Update time (only meaningful for today)
+  const timeEl = document.getElementById('today-time');
+  if(timeEl && !isToday) timeEl.textContent = String(y);
+
+  // Disable/enable next button
+  const nextBtn = document.getElementById('next-day-btn');
+  if(nextBtn) {
+    nextBtn.style.opacity = isToday ? '0.2' : '1';
+    nextBtn.style.pointerEvents = isToday ? 'none' : 'auto';
+  }
+
+  // Re-render today content
+  renderChecklist('list-habits',   HABITS,   'habit_',   'badge-habits');
+  renderChecklist('list-vitamins', VITAMINS, 'vitamin_', 'badge-vitamins');
+  renderWater();
+  renderWhoop();
+  updateWhoopUI();
+  renderChecklist('list-75',      HARD75,  'h75_',     'badge-75');
+  renderChecklist('list-morning', MORNING, 'morning_', 'badge-morning');
+  renderChecklist('list-evening', EVENING, 'evening_', 'badge-evening');
+  bindMetricInputs();
+  bindJournal();
+  updateScore();
+}
+
+// ── JOURNAL ───────────────────────────────────────────────
+function bindJournal() {
+  const el = document.getElementById('journal-entry');
+  if(!el) return;
+  el.value = state.journal || '';
+  const badge = document.getElementById('badge-journal');
+  const update = () => {
+    const words = el.value.trim().split(/\s+/).filter(Boolean).length;
+    if(badge) badge.textContent = words > 0 ? words + ' words' : '—';
+  };
+  update();
+  el.oninput = () => {
+    state.journal = el.value;
+    saveTodayState();
+    update();
+  };
+}
+
+// ── DAY COUNTER ───────────────────────────────────────────
+function getDayNumber() {
+  let start = localStorage.getItem('lifeos_start_date');
+  if(!start) {
+    start = todayKey();
+    localStorage.setItem('lifeos_start_date', start);
+  }
+  const [sy, sm, sd] = start.split('-').map(Number);
+  const startDate = new Date(sy, sm-1, sd);
+  const now = new Date(); now.setHours(0,0,0,0);
+  return Math.max(1, Math.floor((now - startDate) / 86400000) + 1);
+}
+
+function updateDayCounter() {
+  const el = document.getElementById('day-num-el');
+  if(el) el.textContent = 'Day ' + getDayNumber();
+}
+
+// ── WEEKLY HEADER ─────────────────────────────────────────
+function renderWeeklyHeader() {
+  const now  = new Date();
+  const dow  = now.getDay();
+  const mon  = new Date(now); mon.setDate(now.getDate() - ((dow+6)%7));
+  const sun  = new Date(mon); sun.setDate(mon.getDate() + 6);
+  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const fmt  = d => `${MONTHS[d.getMonth()]} ${d.getDate()}`;
+  const rangeEl = document.getElementById('weekly-range-el');
+  if(rangeEl) rangeEl.textContent = `${fmt(mon)} – ${fmt(sun)}`;
+  // ISO week number
+  const jan4 = new Date(now.getFullYear(), 0, 4);
+  const weekNum = Math.ceil(((now - jan4) / 86400000 + jan4.getDay() + 1) / 7);
+  const wnEl = document.getElementById('week-num-el');
+  if(wnEl) wnEl.textContent = 'Week ' + weekNum;
+}
+
+// ── MONTHLY HEADER ────────────────────────────────────────
+function renderMonthlyHeader() {
+  const now        = new Date();
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
+  const el = document.getElementById('month-days-el');
+  if(el) el.textContent = `${now.getDate()} / ${daysInMonth} days`;
+}
+
+// ── WEEKLY STATS ──────────────────────────────────────────
+function renderWeeklyStats() {
+  const week      = getWeekDays();
+  const dayKeys   = week.map((_, i) => {
+    const now = new Date(); const dow = now.getDay();
+    const mon = new Date(now); mon.setDate(now.getDate() - ((dow+6)%7));
+    const d = new Date(mon); d.setDate(mon.getDate() + i);
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  });
+  const days = dayKeys.map(k => loadDay(k)).filter(Boolean);
+
+  const avg = arr => arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : null;
+  const numFmt = (v, dec=0) => v !== null ? (dec ? v.toFixed(dec) : Math.round(v)) : '—';
+
+  const pcts    = week.map(d=>d.pct).filter(p=>p!==null);
+  const sleeps  = days.map(d=>parseFloat(d['m-hours'])).filter(n=>!isNaN(n)&&n>0);
+  const weights = days.map(d=>parseFloat(d['m-weight'])).filter(n=>!isNaN(n)&&n>0);
+  const rhrs    = days.map(d=>parseFloat(d['m-rhr'])).filter(n=>!isNaN(n)&&n>0);
+  const waters  = days.map(d=>WATER.filter(w=>d['water_'+w.name]).reduce((a,w)=>a+w.oz,0)).filter(n=>n>0);
+
+  // Whoop recovery avg from this week's whoop storage
+  const recVals = dayKeys.map(k => {
+    try { const ws = JSON.parse(localStorage.getItem(STORE_PREFIX+'whoop_'+k)||'null'); return ws?.[1]?.val ?? null; } catch(e){return null;}
+  }).filter(v=>v!==null);
+
+  function stat(label, val, unit, sub='') {
+    return `<div class="week-stat">
+      <div class="ws-label">${label}</div>
+      <div class="ws-val">${val !== null && val !== '—' ? val : '—'}<span style="font-size:13px;color:var(--text-2)">${val !== null && val !== '—' ? unit : ''}</span></div>
+      ${sub ? `<div class="ws-sub">${sub}</div>` : ''}
+    </div>`;
+  }
+
+  const grid = document.getElementById('weekly-stats-grid');
+  if(!grid) return;
+  const avgComp   = avg(pcts);
+  const avgSleep  = avg(sleeps);
+  const avgWater  = avg(waters);
+  const avgWeight = avg(weights);
+  const avgRhr    = avg(rhrs);
+  const avgRec    = avg(recVals);
+  grid.innerHTML  =
+    stat('Completion', avgComp  !== null ? Math.round(avgComp)       : null, '%',   pcts.length ? `${pcts.length} day${pcts.length>1?'s':''} logged` : 'No data yet') +
+    stat('Sleep avg',  avgSleep !== null ? avgSleep.toFixed(1)       : null, 'h',   '') +
+    stat('Water avg',  avgWater !== null ? Math.round(avgWater)      : null, 'oz',  avgWater ? `Goal: 128 oz` : '') +
+    stat('Weight avg', avgWeight!== null ? avgWeight.toFixed(1)      : null, 'lbs', '') +
+    stat('RHR avg',    avgRhr   !== null ? Math.round(avgRhr)        : null, 'bpm', '') +
+    stat('Recovery',   avgRec   !== null ? Math.round(avgRec)        : null, '%',   avgRec ? 'Whoop avg' : 'No Whoop data');
+
+  // Strongest / weakest habits this week
+  const allHabitItems = [...HABITS, ...VITAMINS, ...HARD75];
+  const allPrefixes   = [
+    ...HABITS.map(()=>'habit_'), ...VITAMINS.map(()=>'vitamin_'), ...HARD75.map(()=>'h75_')
+  ];
+  const habitData = allHabitItems.map((h, i) => {
+    const done = days.filter(d => d[allPrefixes[i]+h]).length;
+    return { name: h, pct: days.length ? Math.round(done/days.length*100) : 0 };
+  }).filter(h => h.pct > 0 || days.length > 0);
+
+  const sorted  = [...habitData].sort((a,b) => b.pct - a.pct);
+  const top4    = sorted.slice(0,4);
+  const bottom4 = sorted.filter(h=>h.pct<100).slice(-4).reverse();
+  const noDataMsg = '<div style="padding:8px 0;font-family:var(--mono);font-size:11px;color:var(--text-3)">No data yet — start logging today</div>';
+
+  const strongEl = document.getElementById('strongest-habits');
+  if(strongEl) strongEl.innerHTML = top4.length
+    ? top4.map(h=>`<div class="stat-row"><span class="stat-label">${h.name}</span><span class="stat-value pill ${h.pct>=80?'green':'amber'}">${h.pct}%</span></div>`).join('')
+    : noDataMsg;
+
+  const weakEl = document.getElementById('weakest-habits');
+  if(weakEl) weakEl.innerHTML = bottom4.length
+    ? bottom4.map(h=>`<div class="stat-row"><span class="stat-label">${h.name}</span><span class="stat-value pill amber">${h.pct}%</span></div>`).join('')
+    : noDataMsg;
+
+  // Whoop weekly summary
+  const sleepVals  = dayKeys.map(k => { try { const ws=JSON.parse(localStorage.getItem(STORE_PREFIX+'whoop_'+k)||'null'); return ws?.[0]?.val??null; } catch(e){return null;} }).filter(v=>v!==null);
+  const strainVals = dayKeys.map(k => { try { const ws=JSON.parse(localStorage.getItem(STORE_PREFIX+'whoop_'+k)||'null'); return ws?.[2]?.val??null; } catch(e){return null;} }).filter(v=>v!==null);
+  const whoopEl = document.getElementById('whoop-weekly-body');
+  if(whoopEl) {
+    if(!sleepVals.length && !recVals.length) {
+      whoopEl.innerHTML = noDataMsg;
+    } else {
+      const avgSleepScore = avg(sleepVals);
+      const avgRecovery   = avg(recVals);
+      const avgStrain     = avg(strainVals);
+      const peakStrain    = strainVals.length ? Math.max(...strainVals) : null;
+      whoopEl.innerHTML = [
+        ['Avg sleep score', avgSleepScore!==null ? Math.round(avgSleepScore)+'%' : '—'],
+        ['Avg recovery',    avgRecovery!==null   ? Math.round(avgRecovery)+'%'  : '—'],
+        ['Avg strain',      avgStrain!==null     ? avgStrain.toFixed(1)         : '—'],
+        ['Peak strain',     peakStrain!==null    ? peakStrain.toFixed(1)        : '—'],
+      ].map(([l,v])=>`<div class="stat-row"><span class="stat-label">${l}</span><span class="stat-value text-mono">${v}</span></div>`).join('');
+    }
+  }
+
+  // Pacing (75 Hard)
+  const totalDays  = getDayNumber();
+  const hard75Days = getAllDayKeys().filter(k => {
+    const d = loadDay(k); if(!d) return false;
+    return HARD75.every(h => d['h75_'+h]);
+  }).length;
+  const remaining  = Math.max(0, 75 - hard75Days);
+  const onTrack    = hard75Days >= Math.min(totalDays, 75);
+  const pacingEl   = document.getElementById('pacing-body');
+  if(pacingEl) pacingEl.innerHTML = `
+    <div class="stat-row"><span class="stat-label">75 Hard days</span><span class="stat-value text-mono">${hard75Days} / 75</span></div>
+    <div class="stat-row"><span class="stat-label">On track</span><span class="stat-value"><span class="pill ${onTrack?'green':'amber'}">${onTrack?'Yes':'No'}</span></span></div>
+    <div class="stat-row"><span class="stat-label">Days remaining</span><span class="stat-value text-mono">${remaining}</span></div>`;
+}
+
+// ── MONTHLY AVERAGES ──────────────────────────────────────
+function renderMonthlyAverages() {
+  const now   = new Date();
+  const year  = now.getFullYear();
+  const month = now.getMonth();
+  const keys  = getAllDayKeys().filter(k => {
+    const [y,m] = k.split('-').map(Number);
+    return y===year && m===month+1;
+  });
+  const days = keys.map(k=>loadDay(k)).filter(Boolean);
+  const avg  = arr => arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : null;
+
+  const sleeps  = days.map(d=>parseFloat(d['m-hours'])).filter(n=>!isNaN(n)&&n>0);
+  const weights = days.map(d=>parseFloat(d['m-weight'])).filter(n=>!isNaN(n)&&n>0);
+  const rhrs    = days.map(d=>parseFloat(d['m-rhr'])).filter(n=>!isNaN(n)&&n>0);
+  const waters  = days.map(d=>WATER.filter(w=>d['water_'+w.name]).reduce((a,w)=>a+w.oz,0)).filter(n=>n>0);
+
+  function tile(label, val, unit) {
+    return `<div class="week-stat">
+      <div class="ws-label">${label}</div>
+      <div class="ws-val">${val!==null ? val : '—'}<span style="font-size:13px;color:var(--text-2)">${val!==null ? unit : ''}</span></div>
+    </div>`;
+  }
+  const grid = document.getElementById('monthly-avg-grid');
+  if(grid) grid.innerHTML =
+    tile('Sleep',  avg(sleeps)  !== null ? avg(sleeps).toFixed(1)   : null, 'h')  +
+    tile('Water',  avg(waters)  !== null ? Math.round(avg(waters))  : null, 'oz') +
+    tile('Weight', avg(weights) !== null ? avg(weights).toFixed(1)  : null, 'lbs')+
+    tile('RHR',    avg(rhrs)    !== null ? Math.round(avg(rhrs))    : null, 'bpm');
+}
+
+// ── INIT ──────────────────────────────────────────────────
+renderChecklist('list-habits',   HABITS,   'habit_',   'badge-habits');
+renderChecklist('list-vitamins', VITAMINS, 'vitamin_', 'badge-vitamins');
+renderWater();
+renderChecklist('list-75',      HARD75,  'h75_',     'badge-75');
+renderChecklist('list-morning', MORNING, 'morning_', 'badge-morning');
+renderChecklist('list-evening', EVENING, 'evening_', 'badge-evening');
+bindMetricInputs();
+bindJournal();
+updateScore();
+updateDayCounter();
+renderWeeklyBars();
+renderAllTrendCharts();
+renderHistory();
+// Whoop: set up UI, handle OAuth callback if returning from Whoop, then sync
+updateWhoopUI();
+renderWhoop();
+whoopHandleCallback().then(() => {
+  if(whoopIsConnected()) whoopFetchData();
+});
+</script>
+</body>
+</html>
