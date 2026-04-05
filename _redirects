@@ -1,0 +1,2 @@
+/whoop-token  https://api.prod.whoop.com/oauth/oauth2/token  200
+/whoop-api/*  https://api.prod.whoop.com/developer/v1/:splat  200
